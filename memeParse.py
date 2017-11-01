@@ -183,33 +183,33 @@ class pageAnalysis:
 			4:lambda x:	#reacts_avg
 				float(paramDict[3](x))/paramDict[2](x),
 			5:lambda x:	#love
-				self.posters[x].totalReacts[2],
+				self.posters[x].totalReacts['Love'],
 			6:lambda x:	#love_avg
 				float(paramDict[5](x))/paramDict[2](x),
 			7:lambda x:	#haha
-				self.posters[x].totalReacts[0],
+				self.posters[x].totalReacts['Haha'],
 			8:lambda x:	#haha_avg
-				float(paramDict[7](x))/paramDict[0](x),
+				float(paramDict[7](x))/paramDict[2](x),
 			9:lambda x:	#wow
-				self.posters[x].totalReacts[3],
+				self.posters[x].totalReacts['Wow'],
 			10:lambda x:	#wow_avg
-				float(paramDict[9](x))/paramDict[3](x),
+				float(paramDict[9](x))/paramDict[2](x),
 			11:lambda x:	#sad
-				self.posters[x].totalReacts[4],
+				self.posters[x].totalReacts['Sad'],
 			12:lambda x:	#sad_avg
-				float(paramDict[11](x))/paramDict[4](x),
+				float(paramDict[11](x))/paramDict[2](x),
 			13:lambda x:	#pride
-				self.posters[x].totalReacts[5],
+				self.posters[x].totalReacts['Pride'],
 			14:lambda x:	#pride_avg
-				float(paramDict[13](x))/paramDict[5](x),
+				float(paramDict[13](x))/paramDict[2](x),
 			15:lambda x:	#angry
-				self.posters[x].totalReacts[6],
+				self.posters[x].totalReacts['Angry'],
 			16:lambda x:	#angry_avg
-				float(paramDict[15](x))/paramDict[6](x),
+				float(paramDict[15](x))/paramDict[2](x),
 			17:lambda x:	#pure_likes
-				self.posters[x].totalReacts[1],
+				self.posters[x].totalReacts['Like'],
 			18:lambda x:	#pure_likes_avg
-				float(paramDict[17](x))/paramDict[6](x),
+				float(paramDict[17](x))/paramDict[2](x),
 			19:lambda x:	#mod
 			self.posters[x].mod,
 			20:lambda x:
@@ -223,13 +223,14 @@ class pageAnalysis:
 		for arg in args:
 			if type(arg) is int:
 				params += [paramDict[arg]]
-		map_reduce = lambda a: reduce(lambda x,y:x+y,map(lambda z:z(a),params))
+		map_reduce = lambda a: reduce(lambda x,y:x+y, map(lambda z:z(a),params))
 		#~~testing all the lambdas
 		jakob = 'Jakob Myers'
-		for lam in paramDict:
-			print lam
-			print paramDict[lam](jakob)
-		print map_reduce(self.posters[jakob])
+		# print paramDict[3](jakob)
+		# for lam in paramDict:
+		# 	print lam
+		# 	print paramDict[lam](jakob)
+		print map_reduce(jakob)
 
 		if 17 in params and len(params)>1:
 			print 'these params don\'t really make sense but w\\e'
@@ -372,7 +373,8 @@ fileName = 'testParse1.txt'
 
 analysis = pageAnalysis()
 analysis.run(fileName)
-analysis.sort(4,6,8)
+analysis.sort(6,8,10,12,14,16,18)
+analysis.sort(4)
 
 
 
