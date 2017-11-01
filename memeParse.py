@@ -158,6 +158,8 @@ class pageAnalysis:
 		self.parser.feed(fileToParse)
 		posts = self.parser.postList
 		self.addPosts(posts)
+		for post in posts:
+			print post
 		#print len(self.allPosts)
 		#print self.posters.keys()
 		#self.printLikes(True)
@@ -170,6 +172,33 @@ class pageAnalysis:
 		# self.totalLikes = 0
 		# self.totalReacts = {"Haha":0,"Like":0,"Love":0,"Wow":0,"Sad":0,"Pride":0,"Angry":0}
 		# self.totalPosts = 0
+
+		paramWordDict = {
+			'likes':0,
+			'likes_avg':1,
+			'posts':2,
+			'reacts':3,
+			'reacts_avg':4,
+			'love':5,
+			'love_avg':6,
+			'haha':7,
+			'haha_avg':8,
+			'wow':9,
+			'wow_avg':10,
+			'sad':11,
+			'sad_avg':12,
+			'pride':13,
+			'pride_avg':14,
+			'angry':15,
+			'angry_avg':16,
+			'pure_likes':17,
+			'pure_likes_avg':18,
+			'mod':19,
+			'poster':20
+		}
+		reverseWordDict = {}
+		for key in paramWordDict.keys():
+			reverseWordDict[paramWordDict[key]]=key
 
 		paramDict = {
 			0:lambda x:	#likes
@@ -219,33 +248,43 @@ class pageAnalysis:
 		keys = self.posters.keys()
 		params = []
 		#~checking how args handles lists
-		print args
+		#~it just gives a list
+		#print args
 		for arg in args:
 			if type(arg) is int:
 				params += [paramDict[arg]]
+			elif type(arg) is list:
+				for argArgs in arg:
+					params += [paramDict[argArgs]]
+			elif arg in paramWordDict:
+				params+= [paramWordDict[arg]]
+			else:
+				print 'invalid arg: %s'%arg
+
 		map_reduce = lambda a: reduce(lambda x,y:x+y, map(lambda z:z(a),params))
+
 		#~~testing all the lambdas
 		jakob = 'Jakob Myers'
 		# print paramDict[3](jakob)
 		# for lam in paramDict:
 		# 	print lam
 		# 	print paramDict[lam](jakob)
-		print map_reduce(jakob)
+		#print map_reduce(jakob)
 
-		if 17 in params and len(params)>1:
+		if (19 in params ^ 20 in params) and len(params)>1:
 			print 'these params don\'t really make sense but w\\e'
 
-		# if len(params)==0:
-		# 	keys.sort(cmp = lambda x,y:cmp(self.posters[y].totalLikes,self.posters[x].totalLikes))
-		# else:
-		# 	keys.sort(cmp = lambda x,y:cmp(map_reduce(y),map_reduce(x)))
+		if len(params)==0:
+			keys.sort(cmp = lambda x,y:cmp(paramDict[0](y),paramDict[0](x)))
+		else:
+			keys.sort(cmp = lambda x,y:cmp(map_reduce(y),map_reduce(x)))
 
-		self.reacts = {"Haha":0,"Like":0,"Love":0,"Wow":0,"Sad":0,"Pride":0,"Angry":0}
+		# self.reacts = {"Haha":0,"Like":0,"Love":0,"Wow":0,"Sad":0,"Pride":0,"Angry":0}
 
 	def printLikes(self,sort=False):
 		keys = self.posters.keys()
 		if sort:
-			keys.sort(cmp=lambda x,y:cmp(self.posters[y].totalLikes,self.posters[x].totalLikes))
+			keys.sort(cmp=lambda x,y:cmp(x,y))
 		for key in keys:
 			print key+':\t'+('\t' if len(key)<15 else '')+str(self.posters[key].totalLikes)
 
@@ -333,9 +372,14 @@ class myHTMLParser(HTMLParser):
 	# 	print "end\t:", tag
 
 	def handle_data(self, data):
+		#print (self.tag, data)
 		if self.tag != 'comment':
-			if self.tag == 'poster' and self.currentPost.posterNull():
-				self.currentPost.setPoster(data)
+			if self.tag == 'poster':
+				if self.currentPost.posterNull():
+					self.currentPost.setPoster(data)
+				elif 'changed the name of the group' in data:
+					self.currentPost.setText(data[1:])
+					self.currentPost.setType('name change')
 			elif self.tag == 'total likes' and self.currentPost.likesNull():
 				self.currentPost.setLikes(int(data))
 			elif self.tag == 'text':
@@ -369,25 +413,8 @@ class myHTMLParser(HTMLParser):
 			for post in self.postList:
 				print post
 
-fileName = 'testParse1.txt'
-
+fileName = 'testParse3.txt'
 analysis = pageAnalysis()
 analysis.run(fileName)
-analysis.sort(6,8,10,12,14,16,18)
-analysis.sort(4)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# analysis.sort(6,8,10,12,14,16,18)
+# analysis.sort(4)
