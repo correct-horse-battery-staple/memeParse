@@ -54,7 +54,7 @@ class Post:
 		output += '\nLikes:\t' + str(self.likes)
 		# for react in self.reacts:
 		# 	output+='\n\t'+react+' '+str(self.reacts[react])
-		output += '\n\treacts:\t'+str(self.reacts)
+		output += '\nreacts:\t'+str(self.reacts)
 		output += '\nDate time:\t' + self.datetime + ' (%s)'%self.UTC
 		for types in self.type:
 			output += '\ntype:\t' + types
@@ -141,6 +141,9 @@ class pageAnalysis:
 		self.allPosts = []
 		self.mods = {}
 		self.parser = myHTMLParser()
+		self.sortedKeys = []
+		self.params = []
+		self.map_reduce = lambda a: reduce(lambda x,y:x+y, map(lambda z:z(a),self.params))
 
 	def addPosts(self,posts):
 		for post in posts:
@@ -148,6 +151,8 @@ class pageAnalysis:
 			user = post.getPoster()
 			if user not in self.posters:
 				self.posters[user]=ContentProvider(post.getPoster(),post.getMod())
+				self.sortedKeys+=[user]
+				# print self.sortedKeys
 			if post.getMod()>0:
 				self.mods[user]=post.getMod()
 			self.posters[user].addPost(post)
@@ -158,48 +163,23 @@ class pageAnalysis:
 		self.parser.feed(fileToParse)
 		posts = self.parser.postList
 		self.addPosts(posts)
-		for post in posts:
-			print post
-		#print len(self.allPosts)
-		#print self.posters.keys()
-		#self.printLikes(True)
 
-	def sort(self,*args):
-		## params of ContentProviders
-		# self.name = ''
-		# self.posts = []
-		# self.mod = 0
-		# self.totalLikes = 0
-		# self.totalReacts = {"Haha":0,"Like":0,"Love":0,"Wow":0,"Sad":0,"Pride":0,"Angry":0}
-		# self.totalPosts = 0
+	def standardDevPost(self,post):
+		if post not in self.allPosts:
+			print 'come on that\'s not a real post'
+		else:
+			poster = post.poster
+			avgLikes = getLambda(1)(poster)
+			avgTotalReacts = getLambda(4)(poster)
+			avgIndivReacts = [getLambda(x)(poster) for x in range(6,20,2)]
 
-		paramWordDict = {
-			'likes':0,
-			'likes_avg':1,
-			'posts':2,
-			'reacts':3,
-			'reacts_avg':4,
-			'love':5,
-			'love_avg':6,
-			'haha':7,
-			'haha_avg':8,
-			'wow':9,
-			'wow_avg':10,
-			'sad':11,
-			'sad_avg':12,
-			'pride':13,
-			'pride_avg':14,
-			'angry':15,
-			'angry_avg':16,
-			'pure_likes':17,
-			'pure_likes_avg':18,
-			'mod':19,
-			'poster':20
-		}
-		reverseWordDict = {}
-		for key in paramWordDict.keys():
-			reverseWordDict[paramWordDict[key]]=key
+	def standardDevPoster(self,poster):
+		if poster not in self.posters:
+			print 'what you doin\' yo'
+		else:
+			allPosts = self.posters[poster].posts
 
+	def getLambda(self, i):
 		paramDict = {
 			0:lambda x:	#likes
 				self.posters[x].totalLikes,
@@ -241,52 +221,103 @@ class pageAnalysis:
 				float(paramDict[17](x))/paramDict[2](x),
 			19:lambda x:	#mod
 			self.posters[x].mod,
-			20:lambda x:
+			20:lambda x:	#name
 				x
 		}
+		return paramDict[i]
+
+	def sort(self,*args):
+		## params of ContentProviders
+		# self.name = ''
+		# self.posts = []
+		# self.mod = 0
+		# self.totalLikes = 0
+		# self.totalReacts = {"Haha":0,"Like":0,"Love":0,"Wow":0,"Sad":0,"Pride":0,"Angry":0}
+		# self.totalPosts = 0
+
+		paramWordDict = {
+			'likes':0,
+			'likes_avg':1,
+			'posts':2,
+			'reacts':3,
+			'reacts_avg':4,
+			'love':5,
+			'love_avg':6,
+			'haha':7,
+			'haha_avg':8,
+			'wow':9,
+			'wow_avg':10,
+			'sad':11,
+			'sad_avg':12,
+			'pride':13,
+			'pride_avg':14,
+			'angry':15,
+			'angry_avg':16,
+			'pure_likes':17,
+			'pure_likes_avg':18,
+			'mod':19,
+			'poster':20
+		}
+		reverseWordDict = {}
+		for key in paramWordDict.keys():
+			reverseWordDict[paramWordDict[key]]=key
 
 		keys = self.posters.keys()
+		# print keys
 		params = []
 		#~checking how args handles lists
 		#~it just gives a list
 		#print args
+		arg_output = 'args:'
 		for arg in args:
 			if type(arg) is int:
-				params += [paramDict[arg]]
+				arg_output+=' '+reverseWordDict[arg]
+				params += [self.getLambda(arg)]
 			elif type(arg) is list:
 				for argArgs in arg:
-					params += [paramDict[argArgs]]
+					if type(argArgs) is int:
+						arg_output+=' '+reverseWordDict[argArgs]
+						params += [self.getLambda(argArgs)]
+					elif argArgs in paramWordDict:
+						arg_output+=' '+paramWordDict[argArgs]
+						params+= [self.getLambda(paramWordDict[argArgs])]
 			elif arg in paramWordDict:
-				params+= [paramWordDict[arg]]
+				arg_output+=' '+paramWordDict[arg]
+				params+= [self.getLambda(paramWordDict[arg])]
 			else:
 				print 'invalid arg: %s'%arg
 
-		map_reduce = lambda a: reduce(lambda x,y:x+y, map(lambda z:z(a),params))
+		if len(args)==0:
+			print arg_output+' None'
+		else:
+			print arg_output
 
+		self.params = params
 		#~~testing all the lambdas
-		jakob = 'Jakob Myers'
-		# print paramDict[3](jakob)
-		# for lam in paramDict:
-		# 	print lam
-		# 	print paramDict[lam](jakob)
-		#print map_reduce(jakob)
+		# jakob = 'Jakob Myers'
+		# print getLambda(3)(jakob)
+		# print map_reduce(jakob)
 
-		if (19 in params ^ 20 in params) and len(params)>1:
+		if (19 in params) ^ (20 in params) and len(params)>1:
 			print 'these params don\'t really make sense but w\\e'
 
 		if len(params)==0:
-			keys.sort(cmp = lambda x,y:cmp(paramDict[0](y),paramDict[0](x)))
+			self.sortedKeys = sorted(keys,cmp = lambda x,y:cmp(self.getLambda(0)(y),self.getLambda(0)(x)))
+			# print self.sortedKeys
 		else:
-			keys.sort(cmp = lambda x,y:cmp(map_reduce(y),map_reduce(x)))
+			self.sortedKeys = sorted(keys,cmp = lambda x,y:cmp(self.map_reduce(y),self.map_reduce(x)))
+			# print self.sortedKeys
+		#print 'sorted keys: '+str(self.sortedKeys)
 
-		# self.reacts = {"Haha":0,"Like":0,"Love":0,"Wow":0,"Sad":0,"Pride":0,"Angry":0}
-
-	def printLikes(self,sort=False):
+	def printSummary(self,sort=False):
 		keys = self.posters.keys()
 		if sort:
-			keys.sort(cmp=lambda x,y:cmp(x,y))
-		for key in keys:
-			print key+':\t'+('\t' if len(key)<15 else '')+str(self.posters[key].totalLikes)
+			self.sort()
+		for key in self.sortedKeys:
+			if len(self.params)>0:
+				print key+':\t'+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.map_reduce(key))[:5]
+			else:
+				print key+':\t'+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.getLambda(0)(key))[:5]
 
 class myHTMLParser(HTMLParser):
 	attrCount = {}
@@ -413,8 +444,11 @@ class myHTMLParser(HTMLParser):
 			for post in self.postList:
 				print post
 
-fileName = 'testParse3.txt'
+print range(6,20,2)
+
+fileName = 'testParse1.txt'
 analysis = pageAnalysis()
 analysis.run(fileName)
-# analysis.sort(6,8,10,12,14,16,18)
+analysis.sort(1)
+analysis.printSummary()
 # analysis.sort(4)
