@@ -34,17 +34,17 @@ class Post:
 	def setPoster(self, poster):
 		self.poster = poster
 	def setLikes(self, likes):
-		self.likes = likes
+		self.likes = int(likes)
 	def setDatetime(self, datetime):
 		self.datetime = datetime
 	def setUTC(self, utc):
-		self.UTC = utc
+		self.UTC = int(utc)
 	def setReacts(self,reaction, num):
-		self.reacts[reaction] = num
+		self.reacts[reaction] = int(num)
 	def setType(self,types):
 		self.type += [types]
 	def setMod(self,mod):
-		self.modStatus = mod
+		self.modStatus = int(mod)
 
 	def __str__(self):
 		self.consolidate()
@@ -164,7 +164,8 @@ class pageAnalysis:
 		posts = self.parser.postList
 		self.addPosts(posts)
 
-	def dSq(x,y):
+	def dSq(self,x,y):
+		#print x,y
 		return (x-y)**2
 
 	def standardDevPost(self,post,comparePoster=True):
@@ -172,24 +173,31 @@ class pageAnalysis:
 			print 'come on that\'s not a real post'
 		else:
 			poster = post.poster
-			avgLikes = getLambda(1)(poster)
-			avgTotalReacts = getLambda(4)(poster)
-			avgIndivReacts = [getLambda(x)(poster) for x in range(6,20,2)]
+			contentProvider = self.posters[poster]
+			avgLikes = self.getLambda(1)(poster)
+			avgTotalReacts = self.getLambda(4)(poster)
+			avgIndivReacts = [self.getLambda(x)(poster) for x in range(6,20,2)]
+
+			zScores = []
 			if comparePoster:
-				posterPosts = poster.posts
+				posterPosts = contentProvider.posts
 				likeSDSq = 0	#likes sum of differences squared
 				tReactsSDSq = 0
 				iReactsSDSq = [0 for i in range(7)]
 				for posterPost in posterPosts:
 					likeSDSq += self.dSq(posterPost.likes,avgLikes)
-					totalReacts = reduce(lambda y,z:y+z, map(lambda a: self.posters[poster].totalReacts[a], self.posters[poster].totalReacts)),
+					#print posterPost.reacts
+					totalReacts = reduce(lambda y,z:y+z, map(lambda a: posterPost.reacts[a], posterPost.reacts.keys()))
 					tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
-					for i in range(iReactsSDSq):
-						iReactsSDSq[i] += self.dSq(self.posters[poster].reacts[range(6,20,2)[i]],avgIndivReacts)
-				likeVariance = float(likeSDSq)/(poster.totalPosts-1)
-				tReactsVariance = float(tReactsSDSq)/(poster.totalPosts-1)
-				iReactsVariance = float(iReactsSDSq)/(poster.totalPosts-1)
-				return (likeVariance**0.5,tReactsVariance**0.5,iReactsVariance**0.5)
+					for i in range(len(iReactsSDSq)):
+						iReactsSDSq[i] += self.dSq(posterPost.reacts[posterPost.reacts.keys()[i]],avgIndivReacts[i])
+				likeVariance = float(likeSDSq)/(contentProvider.totalPosts-1)
+				tReactsVariance = float(tReactsSDSq)/(contentProvider.totalPosts-1)
+				iReactsVariance = [float(iReactsSDSq[x])/(contentProvider.totalPosts-1) for x in range(len(iReactsSDSq))]
+				zScores = [likeVariance**0.5,tReactsVariance**0.5,[iReactsVariance[x]**0.5 for x in range(len(iReactsVariance))]]
+			else:
+				zScores = [1,1,[1,1,1,1,1,1,1]]
+			
 
 	def standardDevPoster(self,poster):
 		if poster not in self.posters:
@@ -462,11 +470,14 @@ class myHTMLParser(HTMLParser):
 			for post in self.postList:
 				print post
 
-print range(6,20,2)
+#print range(6,20,2)
 
 fileName = 'testParse1.txt'
 analysis = pageAnalysis()
 analysis.run(fileName)
 analysis.sort(1)
 analysis.printSummary()
+mostRecentPost = analysis.allPosts[0]
+print mostRecentPost
+print analysis.standardDevPost(mostRecentPost)
 # analysis.sort(4)
