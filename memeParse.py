@@ -164,7 +164,10 @@ class pageAnalysis:
 		posts = self.parser.postList
 		self.addPosts(posts)
 
-	def standardDevPost(self,post):
+	def dSq(x,y):
+		return (x-y)**2
+
+	def standardDevPost(self,post,comparePoster=True):
 		if post not in self.allPosts:
 			print 'come on that\'s not a real post'
 		else:
@@ -172,6 +175,21 @@ class pageAnalysis:
 			avgLikes = getLambda(1)(poster)
 			avgTotalReacts = getLambda(4)(poster)
 			avgIndivReacts = [getLambda(x)(poster) for x in range(6,20,2)]
+			if comparePoster:
+				posterPosts = poster.posts
+				likeSDSq = 0	#likes sum of differences squared
+				tReactsSDSq = 0
+				iReactsSDSq = [0 for i in range(7)]
+				for posterPost in posterPosts:
+					likeSDSq += self.dSq(posterPost.likes,avgLikes)
+					totalReacts = reduce(lambda y,z:y+z, map(lambda a: self.posters[poster].totalReacts[a], self.posters[poster].totalReacts)),
+					tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
+					for i in range(iReactsSDSq):
+						iReactsSDSq[i] += self.dSq(self.posters[poster].reacts[range(6,20,2)[i]],avgIndivReacts)
+				likeVariance = float(likeSDSq)/(poster.totalPosts-1)
+				tReactsVariance = float(tReactsSDSq)/(poster.totalPosts-1)
+				iReactsVariance = float(iReactsSDSq)/(poster.totalPosts-1)
+				return (likeVariance**0.5,tReactsVariance**0.5,iReactsVariance**0.5)
 
 	def standardDevPoster(self,poster):
 		if poster not in self.posters:
