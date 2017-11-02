@@ -7,7 +7,7 @@ class Post:
 		self.likes = 0
 		self.datetime = ''
 		self.UTC = 0
-		self.reacts = {"Haha":0,"Like":0,"Love":0,"Wow":0,"Sad":0,"Pride":0,"Angry":0}
+		self.reacts = {"Haha":0,"Like":0,"Love":0,"Wow":0,"Sad":0,"Pride":0,"Angry":0,"Thankful":0}
 		self.type = []
 		self.modStatus = 0 #0 - not mod, 1 - mod, 2 - admin
 
@@ -116,7 +116,7 @@ class ContentProvider:
 		self.posts = []
 		self.mod = modStatus
 		self.totalLikes = 0
-		self.totalReacts= {"Haha":0,"Like":0,"Love":0,"Wow":0,"Sad":0,"Pride":0,"Angry":0}
+		self.totalReacts= {"Haha":0,"Like":0,"Love":0,"Wow":0,"Sad":0,"Pride":0,"Angry":0,"Thankful":0}
 		self.totalPosts = 0
 
 	def addPost(self, post):
@@ -173,17 +173,22 @@ class pageAnalysis:
 			print 'come on that\'s not a real post'
 		else:
 			poster = post.poster
+			likes = post.likes
+			tReacts = reduce(lambda x,y:x+y,map(lambda z: post.reacts[z],post.reacts.keys()))
+			iReacts = [post.reacts[x] for x in post.reacts.keys()]
+			#print likes, tReacts, iReacts
+
 			contentProvider = self.posters[poster]
 			avgLikes = self.getLambda(1)(poster)
 			avgTotalReacts = self.getLambda(4)(poster)
-			avgIndivReacts = [self.getLambda(x)(poster) for x in range(6,20,2)]
+			avgIndivReacts = [self.getLambda(x)(poster) for x in range(6,22,2)]
 
 			zScores = []
 			if comparePoster:
 				posterPosts = contentProvider.posts
 				likeSDSq = 0	#likes sum of differences squared
 				tReactsSDSq = 0
-				iReactsSDSq = [0 for i in range(7)]
+				iReactsSDSq = [0 for i in range(len(post.reacts))]
 				for posterPost in posterPosts:
 					likeSDSq += self.dSq(posterPost.likes,avgLikes)
 					#print posterPost.reacts
@@ -191,13 +196,22 @@ class pageAnalysis:
 					tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
 					for i in range(len(iReactsSDSq)):
 						iReactsSDSq[i] += self.dSq(posterPost.reacts[posterPost.reacts.keys()[i]],avgIndivReacts[i])
-				likeVariance = float(likeSDSq)/(contentProvider.totalPosts-1)
-				tReactsVariance = float(tReactsSDSq)/(contentProvider.totalPosts-1)
-				iReactsVariance = [float(iReactsSDSq[x])/(contentProvider.totalPosts-1) for x in range(len(iReactsSDSq))]
-				zScores = [likeVariance**0.5,tReactsVariance**0.5,[iReactsVariance[x]**0.5 for x in range(len(iReactsVariance))]]
+				num = contentProvider.totalPosts-1
+				if num > 0:
+					likeVariance = float(likeSDSq)/num
+					tReactsVariance = float(tReactsSDSq)/num
+					iReactsVariance = [float(iReactsSDSq[x])/num for x in range(len(iReactsSDSq))]
+					zScores = [likeVariance**0.5,tReactsVariance**0.5,[iReactsVariance[x]**0.5 for x in range(len(iReactsVariance))]]
+				else:
+					return None
 			else:
-				zScores = [1,1,[1,1,1,1,1,1,1]]
-			
+				zScores = [1,1,[1,1,1,1,1,1,1,1]]
+			#print zScores
+			return [float(likes-avgLikes)/zScores[0] if zScores[0]!=0 else 0,
+				float(tReacts-avgTotalReacts)/zScores[1] if zScores[1]!=0 else 0,
+				[(float(iReacts[x]-avgIndivReacts[x])/zScores[2][x] if zScores[2][x]!=0 else 0) for x in range(len(iReacts))]]
+
+
 
 	def standardDevPoster(self,poster):
 		if poster not in self.posters:
@@ -241,13 +255,17 @@ class pageAnalysis:
 				self.posters[x].totalReacts['Angry'],
 			16:lambda x:	#angry_avg
 				float(paramDict[15](x))/paramDict[2](x),
-			17:lambda x:	#pure_likes
-				self.posters[x].totalReacts['Like'],
-			18:lambda x:	#pure_likes_avg
+			17:lambda x:	#thankful
+				self.posters[x].totalReacts['Thankful'],
+			18:lambda x:	#thankful_avg
 				float(paramDict[17](x))/paramDict[2](x),
-			19:lambda x:	#mod
+			19:lambda x:	#pure_likes
+				self.posters[x].totalReacts['Like'],
+			20:lambda x:	#pure_likes_avg
+				float(paramDict[19](x))/paramDict[2](x),
+			21:lambda x:	#mod
 			self.posters[x].mod,
-			20:lambda x:	#name
+			22:lambda x:	#name
 				x
 		}
 		return paramDict[i]
@@ -279,10 +297,12 @@ class pageAnalysis:
 			'pride_avg':14,
 			'angry':15,
 			'angry_avg':16,
-			'pure_likes':17,
-			'pure_likes_avg':18,
-			'mod':19,
-			'poster':20
+			'thankful':17,
+			'thankful':18,
+			'pure_likes':19,
+			'pure_likes_avg':20,
+			'mod':21,
+			'poster':22
 		}
 		reverseWordDict = {}
 		for key in paramWordDict.keys():
@@ -324,7 +344,7 @@ class pageAnalysis:
 		# print getLambda(3)(jakob)
 		# print map_reduce(jakob)
 
-		if (19 in params) ^ (20 in params) and len(params)>1:
+		if (21 in params) ^ (22 in params) and len(params)>1:
 			print 'these params don\'t really make sense but w\\e'
 
 		if len(params)==0:
@@ -472,12 +492,15 @@ class myHTMLParser(HTMLParser):
 
 #print range(6,20,2)
 
-fileName = 'testParse1.txt'
+fileName = 'testParse2.txt'
 analysis = pageAnalysis()
 analysis.run(fileName)
 analysis.sort(1)
 analysis.printSummary()
 mostRecentPost = analysis.allPosts[0]
-print mostRecentPost
 print analysis.standardDevPost(mostRecentPost)
+print mostRecentPost
+for recentPost in analysis.allPosts[1:5]:
+	print analysis.standardDevPost(recentPost)
+	print recentPost
 # analysis.sort(4)
