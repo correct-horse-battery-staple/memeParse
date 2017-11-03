@@ -460,8 +460,8 @@ class myHTMLParser(HTMLParser):
 	#~unknown behavior when the entirety of a page's HTML is fed in - currently only tested on code that includes just the
 	#	feed, and has only been tested on a single group's page. Could potentially have unpredicted behavior when run on 
 	#	the HTML of a different group
-	#	[ ] run on the HTML of a different group
-	#	[ ] run on the complete HTML of a group
+	#	[X] run on the HTML of a different group
+	#	[X] run on the complete HTML of the group
 	#	[ ] run on the complete HTML of a different group
 
 	attrCount = {}
@@ -604,16 +604,19 @@ class myHTMLParser(HTMLParser):
 
 #print range(6,20,2)
 
-fileName = 'testParse1.txt'
+fileName = 'epoch2.txt'
 analysis = pageAnalysis()
 analysis.run(fileName)
+print len(analysis.allPosts)
 analysis.sort(1)
 analysis.printSummary()
-mostRecentPost = analysis.allPosts[0]
-print analysis.standardDevPost(mostRecentPost)
-print mostRecentPost
-for recentPost in analysis.allPosts[1:10]:
-	print analysis.standardDevPost(recentPost,False)
-	print analysis.standardDevPost(recentPost)
-	print recentPost
+# mostRecentPost = analysis.allPosts[0]
+# print analysis.standardDevPost(mostRecentPost)
+# print mostRecentPost
+# for recentPost in analysis.allPosts[1:10]:
+# 	print analysis.standardDevPost(recentPost,False)
+# 	print analysis.standardDevPost(recentPost)
+# 	print recentPost
 # analysis.sort(4)
+#for post in analysis.allPosts:
+	#print post
