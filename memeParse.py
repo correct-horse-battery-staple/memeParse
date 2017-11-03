@@ -1,6 +1,8 @@
 from HTMLParser import HTMLParser
 
 class Post:
+	#class meant to store information about a given Facebook post
+	#information is obtained from myHTMLParser
 	def __init__(self):
 		self.text = []
 		self.poster = ''
@@ -11,6 +13,7 @@ class Post:
 		self.type = []
 		self.modStatus = 0 #0 - not mod, 1 - mod, 2 - admin
 
+	#getter setter methods
 	def getText(self):
 		return self.text
 	def getPoster(self):
@@ -28,7 +31,6 @@ class Post:
 	def getMod(self):
 		return self.modStatus
 
-
 	def setText(self, text):
 		self.text += [text]
 	def setPoster(self, poster):
@@ -40,12 +42,15 @@ class Post:
 	def setUTC(self, utc):
 		self.UTC = int(utc)
 	def setReacts(self,reaction, num):
+		#sets a given reaction in the self.reacts dict to be a given value
+		#implemented in this way because of the way myHTMLParser detects reacts
 		self.reacts[reaction] = int(num)
 	def setType(self,types):
 		self.type += [types]
 	def setMod(self,mod):
 		self.modStatus = int(mod)
 
+	#__str__() meant primarily for debugging purposes, but generally for displaying all relevant fields of a post
 	def __str__(self):
 		self.consolidate()
 		output = ''
@@ -61,6 +66,9 @@ class Post:
 		output += '\nmod?:\t' + ('nah' if self.modStatus==0 else ('myeah' if self.modStatus==1 else 'admin'))
 		return output+'\n'
 
+	#series of boolean methods that are used in myHTMLParser to decide whether a field has been assigned yet
+	#not robust, as it is theoretically possible for an edge case to successfully fail one of these tests
+	#	despite being assigned, but not really worth worrying about
 	def textNull(self):
 		return len(self.text)==0
 	def posterNull(self):
@@ -79,9 +87,14 @@ class Post:
 	def typeNull(self):
 		return len(self.type)==0
 
+	#a boolean method that checks whether a post is null - it doesn't check everyone of the above methods, but
+	#	in principle it shouldn't have to, as several are set at the same time and even then a post without
+	#	these attributes is effectively non-existant anyways
 	def isNull(self):
 		return self.textNull() and self.posterNull() and self.likesNull() and self.datetimeNull() and self.reactsNull()
 
+	#method that cleans up the output of myHTMLParser, in particular merging together multiple text fields into a single string
+	#	and consolidates a list of types with duplicates into a set with only unique types
 	def consolidate(self):
 		def joinCon(x,y):
 			if x[-1].islower() or x[-1]==' ':
@@ -111,6 +124,8 @@ class Post:
 		# print self.type
 
 class ContentProvider:
+	#class that represents a poster (content provider)
+	#mostly a vehicle for associated posts by a given individual
 	def __init__(self,name,modStatus):
 		self.name = name
 		self.posts = []
@@ -136,7 +151,9 @@ class ContentProvider:
 		return self.name+' '+self.totalLikes+' '+self.totalPosts
 
 class pageAnalysis:
-	def __init__(self,):
+	#class that contains multiple analysis methods; contains an instance of myHTMLParser that is run
+
+	def __init__(self):
 		self.posters = {}
 		self.allPosts = []
 		self.mods = {}
@@ -145,7 +162,13 @@ class pageAnalysis:
 		self.params = []
 		self.map_reduce = lambda a: reduce(lambda x,y:x+y, map(lambda z:z(a),self.params))
 
+		self.standardDev = 0
+
 	def addPosts(self,posts):
+		#this class tracks a dict of ContentProviders indexed by poster name, and this method
+		#	explicitly takes in a list of Posts, which are associated with the appropriate ContentProvider,
+		#	adding them when necessary
+
 		for post in posts:
 			#print post
 			user = post.getPoster()
@@ -159,16 +182,24 @@ class pageAnalysis:
 			self.allPosts+=[post]
 
 	def run(self, file):
+		#runs the instance of myHTMLParser on the text file with name specified by file
+
 		fileToParse = open(file).read()
 		self.parser.feed(fileToParse)
 		posts = self.parser.postList
 		self.addPosts(posts)
 
 	def dSq(self,x,y):
+		#method for calculating the d(ifference) sq(uared)
+
 		#print x,y
 		return (x-y)**2
 
 	def standardDevPost(self,post,comparePoster=True):
+		#calculates the standard deviation of all parameters of a post
+		#based on the boolean value of comparePoster, it either calculates the standard deviation based on
+		#	the posts made by a specific ContentProvider or by across all ContentProviders (across self.allPosts)
+
 		if post not in self.allPosts:
 			print 'come on that\'s not a real post'
 		else:
@@ -178,26 +209,27 @@ class pageAnalysis:
 			iReacts = [post.reacts[x] for x in post.reacts.keys()]
 			#print likes, tReacts, iReacts
 
-			contentProvider = self.posters[poster]
-			avgLikes = self.getLambda(1)(poster)
-			avgTotalReacts = self.getLambda(4)(poster)
-			avgIndivReacts = [self.getLambda(x)(poster) for x in range(6,22,2)]
-
 			zScores = []
 			if comparePoster:
-				posterPosts = contentProvider.posts
-				likeSDSq = 0	#likes sum of differences squared
-				tReactsSDSq = 0
-				iReactsSDSq = [0 for i in range(len(post.reacts))]
-				for posterPost in posterPosts:
-					likeSDSq += self.dSq(posterPost.likes,avgLikes)
-					#print posterPost.reacts
-					totalReacts = reduce(lambda y,z:y+z, map(lambda a: posterPost.reacts[a], posterPost.reacts.keys()))
-					tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
-					for i in range(len(iReactsSDSq)):
-						iReactsSDSq[i] += self.dSq(posterPost.reacts[posterPost.reacts.keys()[i]],avgIndivReacts[i])
+				contentProvider = self.posters[poster]
 				num = contentProvider.totalPosts-1
 				if num > 0:
+					avgLikes = self.getLambda(1)(poster)
+					avgTotalReacts = self.getLambda(4)(poster)
+					avgIndivReacts = [self.getLambda(x)(poster) for x in range(6,22,2)]
+
+					posterPosts = contentProvider.posts
+					likeSDSq = 0	#likes sum of differences squared
+					tReactsSDSq = 0
+					iReactsSDSq = [0 for i in range(len(post.reacts))]
+					for posterPost in posterPosts:
+						likeSDSq += self.dSq(posterPost.likes,avgLikes)
+						#print posterPost.reacts
+						totalReacts = reduce(lambda y,z:y+z, map(lambda a: posterPost.reacts[a], posterPost.reacts.keys()))
+						tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
+						for i in range(len(iReactsSDSq)):
+							iReactsSDSq[i] += self.dSq(posterPost.reacts[posterPost.reacts.keys()[i]],avgIndivReacts[i])
+
 					likeVariance = float(likeSDSq)/num
 					tReactsVariance = float(tReactsSDSq)/num
 					iReactsVariance = [float(iReactsSDSq[x])/num for x in range(len(iReactsSDSq))]
@@ -205,21 +237,60 @@ class pageAnalysis:
 				else:
 					return None
 			else:
-				zScores = [1,1,[1,1,1,1,1,1,1,1]]
-			#print zScores
+				num = len(self.allPosts)-1
+				if num > 0:
+					avgLikes = 0
+					avgTotalReacts = 0
+					avgIndivReacts = [0 for x in range(len(post.reacts))]
+					for allPost in self.allPosts:
+						avgLikes += allPost.likes
+						avgTotalReacts += reduce(lambda y,z:y+z, map(lambda a: allPost.reacts[a], allPost.reacts.keys()))
+						for i in range(len(allPost.reacts)):
+							avgIndivReacts[i] += allPost.reacts[allPost.reacts.keys()[i]]
+
+					#~	[ ] make this more efficient by saving avgLikes (which is really a sum up until this point) and calculating the average
+					#		separately, since that value can be updated everytime a new post is added
+					avgLikes = float(avgLikes)/num
+					avgTotalReacts = float(avgTotalReacts)/num
+					avgIndivReacts = [float(avgIndivReacts[x])/num for x in range(len(avgIndivReacts))]
+
+					# print 'avg: ',[avgLikes,avgTotalReacts,avgIndivReacts]
+
+					likeSDSq = 0	#likes sum of differences squared
+					tReactsSDSq = 0
+					iReactsSDSq = [0 for i in range(len(post.reacts))]
+					for allPost in self.allPosts:
+						likeSDSq += self.dSq(allPost.likes,avgLikes)
+						totalReacts = reduce(lambda y,z:y+z, map(lambda a: allPost.reacts[a], allPost.reacts.keys()))
+						tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
+						for i in range(len(iReactsSDSq)):
+							iReactsSDSq[i] += self.dSq(allPost.reacts[allPost.reacts.keys()[i]],avgIndivReacts[i])
+				
+					likeVariance = float(likeSDSq)/num
+					tReactsVariance = float(tReactsSDSq)/num
+					iReactsVariance = [float(iReactsSDSq[x])/num for x in range(len(iReactsSDSq))]
+					zScores = [likeVariance**0.5,tReactsVariance**0.5,[iReactsVariance[x]**0.5 for x in range(len(iReactsVariance))]]
+				else:
+					return None
+			#debug print that shows the calculated zScores
+			print 'z: ',zScores
 			return [float(likes-avgLikes)/zScores[0] if zScores[0]!=0 else 0,
 				float(tReacts-avgTotalReacts)/zScores[1] if zScores[1]!=0 else 0,
 				[(float(iReacts[x]-avgIndivReacts[x])/zScores[2][x] if zScores[2][x]!=0 else 0) for x in range(len(iReacts))]]
 
-
-
 	def standardDevPoster(self,poster):
+		#~	[ ] current unimplemented
+
+		#calculates the standard deviation of a ContentProvider compared against all others
+
 		if poster not in self.posters:
 			print 'what you doin\' yo'
 		else:
 			allPosts = self.posters[poster].posts
 
 	def getLambda(self, i):
+		#returns lambda functions that calculate a variety of statistics for a individual poster
+
 		paramDict = {
 			0:lambda x:	#likes
 				self.posters[x].totalLikes,
@@ -271,6 +342,10 @@ class pageAnalysis:
 		return paramDict[i]
 
 	def sort(self,*args):
+		#establishes an order to sort things in by taking in a list of arguments that indicate which
+		#	values should be summed before comparison - the resulting sorted order is saved in
+		#	self.sortedKeys and the parameters in self.params, to be accessed in other methods that involve sorting
+
 		## params of ContentProviders
 		# self.name = ''
 		# self.posts = []
@@ -311,8 +386,8 @@ class pageAnalysis:
 		keys = self.posters.keys()
 		# print keys
 		params = []
-		#~checking how args handles lists
-		#~it just gives a list
+		#checking how args handles lists
+		#it just gives a list
 		#print args
 		arg_output = 'args:'
 		for arg in args:
@@ -339,7 +414,7 @@ class pageAnalysis:
 			print arg_output
 
 		self.params = params
-		#~~testing all the lambdas
+		#testing all the lambdas
 		# jakob = 'Jakob Myers'
 		# print getLambda(3)(jakob)
 		# print map_reduce(jakob)
@@ -356,6 +431,15 @@ class pageAnalysis:
 		#print 'sorted keys: '+str(self.sortedKeys)
 
 	def printSummary(self,sort=False):
+		#prints out a summary of all the posters, which currently is a very barebones single value that
+		#	defaults to highest total likes but otherwise is based on the sorting params
+
+		#~	the sort=True parameter doesn't do what I really want it to yet, since sorting it actually
+		#		undoes previously performed sorting by defaulting to sorting in order of avgLikes
+		# 	probably should add in another param 'params' that feeds straight into sort(), but probably
+		#		want to force explicit use of that param with fparam or w/e
+		#	[ ] resolved
+
 		keys = self.posters.keys()
 		if sort:
 			self.sort()
@@ -365,7 +449,21 @@ class pageAnalysis:
 			else:
 				print key+':\t'+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.getLambda(0)(key))[:5]
 
+
 class myHTMLParser(HTMLParser):
+	#~	[ ] create an actual __init__ method
+
+	#performs HTML parsing work on very specific sections of HTML code that has been obtained from the Facebook page of a group
+	#	and stores it in a list of Posts that is later fed into the analysis.addPosts() method when it is called in the
+	#	analysis.run() method
+
+	#~unknown behavior when the entirety of a page's HTML is fed in - currently only tested on code that includes just the
+	#	feed, and has only been tested on a single group's page. Could potentially have unpredicted behavior when run on 
+	#	the HTML of a different group
+	#	[ ] run on the HTML of a different group
+	#	[ ] run on the complete HTML of a group
+	#	[ ] run on the complete HTML of a different group
+
 	attrCount = {}
 	dataList = []
 	currentPost = Post()
@@ -373,6 +471,13 @@ class myHTMLParser(HTMLParser):
 	tag = 'post'
 
 	def handle_starttag(self, tag, attrs):
+		#sets self.tag based on the attrs attached to a given tag, which allow the handle_data() method to know what
+		#	type of data to expect
+		#there are also some data types that are assigned in this method outright due to their information being stored
+		#	in the attrs, like reacts and time
+		
+		#these dicts contain empirically obtained attributes that have been strongly correlated with the identity
+		#	of the next datum to be parsed after a given tag, or of data contained within the attrs themselves
 		postAttr = ('class','_4-u2 mbm _4mrt _5jmm _5pat _5v3q _4-u8')
 		attrDict = {
 			('class','_1g5v'):"total likes",
@@ -449,6 +554,8 @@ class myHTMLParser(HTMLParser):
 	# 	print "end\t:", tag
 
 	def handle_data(self, data):
+		#accesses the self.tag set in handle_starttag() to determine what to do with the data
+
 		#print (self.tag, data)
 		if self.tag != 'comment':
 			if self.tag == 'poster':
@@ -479,7 +586,10 @@ class myHTMLParser(HTMLParser):
 			print i
 
 	def printPosts(self, concise=False):
-		print 'printPosts called'
+		#prints out all the posts that have been parsed, with the concise param indicating that
+		#	only some information is needed
+
+		#print 'printPosts called'
 		if concise:
 			for post in self.postList:
 				print 'Poster:\t',post.poster
@@ -490,9 +600,11 @@ class myHTMLParser(HTMLParser):
 			for post in self.postList:
 				print post
 
+#main method: this is where the magic happens
+
 #print range(6,20,2)
 
-fileName = 'testParse2.txt'
+fileName = 'testParse1.txt'
 analysis = pageAnalysis()
 analysis.run(fileName)
 analysis.sort(1)
@@ -500,7 +612,8 @@ analysis.printSummary()
 mostRecentPost = analysis.allPosts[0]
 print analysis.standardDevPost(mostRecentPost)
 print mostRecentPost
-for recentPost in analysis.allPosts[1:5]:
+for recentPost in analysis.allPosts[1:10]:
+	print analysis.standardDevPost(recentPost,False)
 	print analysis.standardDevPost(recentPost)
 	print recentPost
 # analysis.sort(4)
