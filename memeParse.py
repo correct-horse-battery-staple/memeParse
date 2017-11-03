@@ -145,6 +145,8 @@ class pageAnalysis:
 		self.params = []
 		self.map_reduce = lambda a: reduce(lambda x,y:x+y, map(lambda z:z(a),self.params))
 
+		self.standardDev = 0
+
 	def addPosts(self,posts):
 		for post in posts:
 			#print post
@@ -178,26 +180,27 @@ class pageAnalysis:
 			iReacts = [post.reacts[x] for x in post.reacts.keys()]
 			#print likes, tReacts, iReacts
 
-			contentProvider = self.posters[poster]
-			avgLikes = self.getLambda(1)(poster)
-			avgTotalReacts = self.getLambda(4)(poster)
-			avgIndivReacts = [self.getLambda(x)(poster) for x in range(6,22,2)]
-
 			zScores = []
 			if comparePoster:
-				posterPosts = contentProvider.posts
-				likeSDSq = 0	#likes sum of differences squared
-				tReactsSDSq = 0
-				iReactsSDSq = [0 for i in range(len(post.reacts))]
-				for posterPost in posterPosts:
-					likeSDSq += self.dSq(posterPost.likes,avgLikes)
-					#print posterPost.reacts
-					totalReacts = reduce(lambda y,z:y+z, map(lambda a: posterPost.reacts[a], posterPost.reacts.keys()))
-					tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
-					for i in range(len(iReactsSDSq)):
-						iReactsSDSq[i] += self.dSq(posterPost.reacts[posterPost.reacts.keys()[i]],avgIndivReacts[i])
+				contentProvider = self.posters[poster]
 				num = contentProvider.totalPosts-1
 				if num > 0:
+					avgLikes = self.getLambda(1)(poster)
+					avgTotalReacts = self.getLambda(4)(poster)
+					avgIndivReacts = [self.getLambda(x)(poster) for x in range(6,22,2)]
+
+					posterPosts = contentProvider.posts
+					likeSDSq = 0	#likes sum of differences squared
+					tReactsSDSq = 0
+					iReactsSDSq = [0 for i in range(len(post.reacts))]
+					for posterPost in posterPosts:
+						likeSDSq += self.dSq(posterPost.likes,avgLikes)
+						#print posterPost.reacts
+						totalReacts = reduce(lambda y,z:y+z, map(lambda a: posterPost.reacts[a], posterPost.reacts.keys()))
+						tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
+						for i in range(len(iReactsSDSq)):
+							iReactsSDSq[i] += self.dSq(posterPost.reacts[posterPost.reacts.keys()[i]],avgIndivReacts[i])
+
 					likeVariance = float(likeSDSq)/num
 					tReactsVariance = float(tReactsSDSq)/num
 					iReactsVariance = [float(iReactsSDSq[x])/num for x in range(len(iReactsSDSq))]
@@ -205,8 +208,37 @@ class pageAnalysis:
 				else:
 					return None
 			else:
-				zScores = [1,1,[1,1,1,1,1,1,1,1]]
-			#print zScores
+				num = len(self.allPosts)-1
+				if num > 0:
+					avgLikes = 0
+					avgTotalReacts = 0
+					avgIndivReacts = [0 for x in range(len(post.reacts))]
+					for allPost in self.allPosts:
+						avgLikes += allPost.likes
+						avgTotalReacts += reduce(lambda y,z:y+z, map(lambda a: allPost.reacts[a], allPost.reacts.keys()))
+						for i in range(len(allPost.reacts)):
+							avgIndivReacts[i] += allPost.reacts[allPost.reacts.keys()[i]]
+					avgLikes = float(avgLikes)/num
+					avgTotalReacts = float(avgTotalReacts)/num
+					avgIndivReacts = [float(avgIndivReacts[x])/num for x in range(len(avgIndivReacts))]
+
+					likeSDSq = 0	#likes sum of differences squared
+					tReactsSDSq = 0
+					iReactsSDSq = [0 for i in range(len(post.reacts))]
+					for allPost in self.allPosts:
+						likeSDSq += self.dSq(allPost.likes,avgLikes)
+						totalReacts = reduce(lambda y,z:y+z, map(lambda a: allPost.reacts[a], allPost.reacts.keys()))
+						tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
+						for i in range(len(iReactsSDSq)):
+							iReactsSDSq[i] += self.dSq(allPost.reacts[allPost.reacts.keys()[i]],avgIndivReacts[i])
+				
+					likeVariance = float(likeSDSq)/num
+					tReactsVariance = float(tReactsSDSq)/num
+					iReactsVariance = [float(iReactsSDSq[x])/num for x in range(len(iReactsSDSq))]
+					zScores = [likeVariance**0.5,tReactsVariance**0.5,[iReactsVariance[x]**0.5 for x in range(len(iReactsVariance))]]
+				else:
+					return None
+			print 'z: ',zScores
 			return [float(likes-avgLikes)/zScores[0] if zScores[0]!=0 else 0,
 				float(tReacts-avgTotalReacts)/zScores[1] if zScores[1]!=0 else 0,
 				[(float(iReacts[x]-avgIndivReacts[x])/zScores[2][x] if zScores[2][x]!=0 else 0) for x in range(len(iReacts))]]
@@ -492,7 +524,7 @@ class myHTMLParser(HTMLParser):
 
 #print range(6,20,2)
 
-fileName = 'testParse2.txt'
+fileName = 'testParse1.txt'
 analysis = pageAnalysis()
 analysis.run(fileName)
 analysis.sort(1)
@@ -500,7 +532,8 @@ analysis.printSummary()
 mostRecentPost = analysis.allPosts[0]
 print analysis.standardDevPost(mostRecentPost)
 print mostRecentPost
-for recentPost in analysis.allPosts[1:5]:
+for recentPost in analysis.allPosts[1:10]:
+	print analysis.standardDevPost(recentPost,False)
 	print analysis.standardDevPost(recentPost)
 	print recentPost
 # analysis.sort(4)
