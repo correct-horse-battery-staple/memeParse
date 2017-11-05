@@ -163,6 +163,7 @@ class pageAnalysis:
 		self.map_reduce = lambda a: reduce(lambda x,y:x+y, map(lambda z:z(a),self.params))
 
 		self.standardDev = 0
+		self.adjustment = 0
 
 	def addPosts(self,posts):
 		#this class tracks a dict of ContentProviders indexed by poster name, and this method
@@ -279,25 +280,85 @@ class pageAnalysis:
 				[(float(iReacts[x]-avgIndivReacts[x])/zScores[2][x] if zScores[2][x]!=0 else 0) for x in range(len(iReacts))]]
 
 	def standardDevPoster(self,poster):
-		#~	[ ] current unimplemented
+		#~	[ ] currently unimplemented
 
 		#calculates the standard deviation of a ContentProvider compared against all others
 
 		if poster not in self.posters:
 			print 'what you doin\' yo'
 		else:
-			allPosts = self.posters[poster].posts
+			provider = self.posters[poster]
+			allPosts = provider.posts
+			num = len(allPosts)-1
+			if num > 0:
+				avgLikes = provider.totalLikes
+				avgTotalReacts = 0
+				avgIndivReacts = [0 for x in range(len(post.reacts))]
+				for allPost in self.allPosts:
+					avgTotalReacts += reduce(lambda y,z:y+z, map(lambda a: allPost.reacts[a], allPost.reacts.keys()))
+					for i in range(len(allPost.reacts)):
+						avgIndivReacts[i] += allPost.reacts[allPost.reacts.keys()[i]]
+
+				avgLikes = float(avgLikes)/num
+				avgTotalReacts = float(avgTotalReacts)/num
+				avgIndivReacts = [float(avgIndivReacts[x])/num for x in range(len(avgIndivReacts))]
+
+				# print 'avg: ',[avgLikes,avgTotalReacts,avgIndivReacts]
+
+				likeSDSq = 0	#likes sum of differences squared
+				tReactsSDSq = 0
+				iReactsSDSq = [0 for i in range(len(post.reacts))]
+				for allPost in self.allPosts:
+					likeSDSq += self.dSq(allPost.likes,avgLikes)
+					totalReacts = reduce(lambda y,z:y+z, map(lambda a: allPost.reacts[a], allPost.reacts.keys()))
+					tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
+					for i in range(len(iReactsSDSq)):
+						iReactsSDSq[i] += self.dSq(allPost.reacts[allPost.reacts.keys()[i]],avgIndivReacts[i])
+			
+				likeVariance = float(likeSDSq)/num
+				tReactsVariance = float(tReactsSDSq)/num
+				iReactsVariance = [float(iReactsSDSq[x])/num for x in range(len(iReactsSDSq))]
+				zScores = [likeVariance**0.5,tReactsVariance**0.5,[iReactsVariance[x]**0.5 for x in range(len(iReactsVariance))]]
+			else:
+				return None
+			#debug print that shows the calculated zScores
+			print 'z: ',zScores
+			return [float(likes-avgLikes)/zScores[0] if zScores[0]!=0 else 0,
+				float(tReacts-avgTotalReacts)/zScores[1] if zScores[1]!=0 else 0,
+				[(float(iReacts[x]-avgIndivReacts[x])/zScores[2][x] if zScores[2][x]!=0 else 0) for x in range(len(iReacts))]]
+
+	def setAdjustment(self,adjustment):
+		self.adjustment = adjustment
 
 	def getLambda(self, i):
 		#returns lambda functions that calculate a variety of statistics for a individual poster
 
+		def filtered(x):
+			return filter(lambda a:a.likes>=self.adjustment,self.posters[x].posts)
+
+		def filteredLikes(x):
+			adjPosts = filtered(x)
+			if len(adjPosts)>0:
+				return reduce(lambda x,y: x+y, map(lambda z: z.likes,adjPosts))
+			else:
+				return 0
+
+		def filteredPosts(x):
+			adjPosts = filtered(x)
+			if len(adjPosts)>0:
+				return len(adjPosts)
+			else:
+				return 1
+
 		paramDict = {
 			0:lambda x:	#likes
-				self.posters[x].totalLikes,
+				self.posters[x].totalLikes if self.adjustment==0
+				else filteredLikes(x),
 			1:lambda x:	#likes_avg
-				float(self.posters[x].totalLikes)/self.posters[x].totalPosts,
+				float(paramDict[0](x))/paramDict[2](x),
 			2:lambda x:	#posts
-				self.posters[x].totalPosts,
+				self.posters[x].totalPosts if self.adjustment==0
+				else filteredPosts(x),
 			3:lambda x:	#reacts
 				reduce(lambda y,z:y+z, map(lambda a: self.posters[x].totalReacts[a], self.posters[x].totalReacts)),
 			4:lambda x:	#reacts_avg
@@ -445,30 +506,32 @@ class pageAnalysis:
 			self.sort()
 		for key in self.sortedKeys:
 			if len(self.params)>0:
-				print key+':\t'+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.map_reduce(key))[:5]
+				print key+':\t'+('\t' if len(key)<7 else '')+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.map_reduce(key))[:5]
 			else:
-				print key+':\t'+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.getLambda(0)(key))[:5]
+				print key+':\t'+('\t' if len(key)<7 else '')+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.getLambda(0)(key))[:5]
 
 
 class myHTMLParser(HTMLParser):
-	#~	[ ] create an actual __init__ method
+	#	[X] create an actual __init__ method
 
 	#performs HTML parsing work on very specific sections of HTML code that has been obtained from the Facebook page of a group
 	#	and stores it in a list of Posts that is later fed into the analysis.addPosts() method when it is called in the
 	#	analysis.run() method
 
-	#~unknown behavior when the entirety of a page's HTML is fed in - currently only tested on code that includes just the
+	#unknown behavior when the entirety of a page's HTML is fed in - currently only tested on code that includes just the
 	#	feed, and has only been tested on a single group's page. Could potentially have unpredicted behavior when run on 
 	#	the HTML of a different group
-	#	[ ] run on the HTML of a different group
-	#	[ ] run on the complete HTML of a group
-	#	[ ] run on the complete HTML of a different group
+	#	[X] run on the HTML of a different group
+	#	[X] run on the complete HTML of the group
+	#	[X] run on the complete HTML of a different group
 
-	attrCount = {}
-	dataList = []
-	currentPost = Post()
-	postList = []
-	tag = 'post'
+	def __init__(self):
+		self.attrCount = {}
+		self.dataList = []
+		self.currentPost = Post()
+		self.postList = []
+		self.tag = 'post'
+		HTMLParser.__init__(self)
 
 	def handle_starttag(self, tag, attrs):
 		#sets self.tag based on the attrs attached to a given tag, which allow the handle_data() method to know what
@@ -604,16 +667,22 @@ class myHTMLParser(HTMLParser):
 
 #print range(6,20,2)
 
-fileName = 'testParse1.txt'
+fileName = 'epoch2.txt'
 analysis = pageAnalysis()
 analysis.run(fileName)
+print len(analysis.allPosts)
 analysis.sort(1)
 analysis.printSummary()
-mostRecentPost = analysis.allPosts[0]
-print analysis.standardDevPost(mostRecentPost)
-print mostRecentPost
-for recentPost in analysis.allPosts[1:10]:
-	print analysis.standardDevPost(recentPost,False)
-	print analysis.standardDevPost(recentPost)
-	print recentPost
+analysis.setAdjustment(10)
+analysis.sort(1)
+analysis.printSummary()
+# mostRecentPost = analysis.allPosts[0]
+# print analysis.standardDevPost(mostRecentPost)
+# print mostRecentPost
+# for recentPost in analysis.allPosts[1:10]:
+# 	print analysis.standardDevPost(recentPost,False)
+# 	print analysis.standardDevPost(recentPost)
+# 	print recentPost
 # analysis.sort(4)
+#for post in analysis.allPosts:
+	#print post
