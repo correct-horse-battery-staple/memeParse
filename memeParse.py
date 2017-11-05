@@ -480,18 +480,20 @@ class myHTMLParser(HTMLParser):
 	#	and stores it in a list of Posts that is later fed into the analysis.addPosts() method when it is called in the
 	#	analysis.run() method
 
-	#~unknown behavior when the entirety of a page's HTML is fed in - currently only tested on code that includes just the
+	#unknown behavior when the entirety of a page's HTML is fed in - currently only tested on code that includes just the
 	#	feed, and has only been tested on a single group's page. Could potentially have unpredicted behavior when run on 
 	#	the HTML of a different group
 	#	[X] run on the HTML of a different group
 	#	[X] run on the complete HTML of the group
-	#	[ ] run on the complete HTML of a different group
+	#	[X] run on the complete HTML of a different group
 
-	attrCount = {}
-	dataList = []
-	currentPost = Post()
-	postList = []
-	tag = 'post'
+	def __init__(self):
+		self.attrCount = {}
+		self.dataList = []
+		self.currentPost = Post()
+		self.postList = []
+		self.tag = 'post'
+		HTMLParser.__init__(self)
 
 	def handle_starttag(self, tag, attrs):
 		#sets self.tag based on the attrs attached to a given tag, which allow the handle_data() method to know what
