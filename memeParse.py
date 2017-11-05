@@ -163,6 +163,7 @@ class pageAnalysis:
 		self.map_reduce = lambda a: reduce(lambda x,y:x+y, map(lambda z:z(a),self.params))
 
 		self.standardDev = 0
+		self.adjustment = 0
 
 	def addPosts(self,posts):
 		#this class tracks a dict of ContentProviders indexed by poster name, and this method
@@ -288,16 +289,38 @@ class pageAnalysis:
 		else:
 			allPosts = self.posters[poster].posts
 
+	def setAdjustment(self,adjustment):
+		self.adjustment = adjustment
+
 	def getLambda(self, i):
 		#returns lambda functions that calculate a variety of statistics for a individual poster
 
+		def filtered(x):
+			return filter(lambda a:a.likes>=self.adjustment,self.posters[x].posts)
+
+		def filteredLikes(x):
+			adjPosts = filtered(x)
+			if len(adjPosts)>0:
+				return reduce(lambda x,y: x+y, map(lambda z: z.likes,adjPosts))
+			else:
+				return 0
+
+		def filteredPosts(x):
+			adjPosts = filtered(x)
+			if len(adjPosts)>0:
+				return len(adjPosts)
+			else:
+				return 1
+
 		paramDict = {
 			0:lambda x:	#likes
-				self.posters[x].totalLikes,
+				self.posters[x].totalLikes if self.adjustment==0
+				else filteredLikes(x),
 			1:lambda x:	#likes_avg
-				float(self.posters[x].totalLikes)/self.posters[x].totalPosts,
+				float(paramDict[0](x))/paramDict[2](x),
 			2:lambda x:	#posts
-				self.posters[x].totalPosts,
+				self.posters[x].totalPosts if self.adjustment==0
+				else filteredPosts(x),
 			3:lambda x:	#reacts
 				reduce(lambda y,z:y+z, map(lambda a: self.posters[x].totalReacts[a], self.posters[x].totalReacts)),
 			4:lambda x:	#reacts_avg
@@ -445,9 +468,9 @@ class pageAnalysis:
 			self.sort()
 		for key in self.sortedKeys:
 			if len(self.params)>0:
-				print key+':\t'+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.map_reduce(key))[:5]
+				print key+':\t'+('\t' if len(key)<7 else '')+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.map_reduce(key))[:5]
 			else:
-				print key+':\t'+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.getLambda(0)(key))[:5]
+				print key+':\t'+('\t' if len(key)<7 else '')+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.getLambda(0)(key))[:5]
 
 
 class myHTMLParser(HTMLParser):
@@ -608,6 +631,9 @@ fileName = 'epoch2.txt'
 analysis = pageAnalysis()
 analysis.run(fileName)
 print len(analysis.allPosts)
+analysis.sort(1)
+analysis.printSummary()
+analysis.setAdjustment(10)
 analysis.sort(1)
 analysis.printSummary()
 # mostRecentPost = analysis.allPosts[0]
