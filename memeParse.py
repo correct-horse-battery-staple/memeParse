@@ -280,14 +280,52 @@ class pageAnalysis:
 				[(float(iReacts[x]-avgIndivReacts[x])/zScores[2][x] if zScores[2][x]!=0 else 0) for x in range(len(iReacts))]]
 
 	def standardDevPoster(self,poster):
-		#~	[ ] current unimplemented
+		#~	[ ] currently unimplemented
 
 		#calculates the standard deviation of a ContentProvider compared against all others
 
 		if poster not in self.posters:
 			print 'what you doin\' yo'
 		else:
-			allPosts = self.posters[poster].posts
+			provider = self.posters[poster]
+			allPosts = provider.posts
+			num = len(allPosts)-1
+			if num > 0:
+				avgLikes = provider.totalLikes
+				avgTotalReacts = 0
+				avgIndivReacts = [0 for x in range(len(post.reacts))]
+				for allPost in self.allPosts:
+					avgTotalReacts += reduce(lambda y,z:y+z, map(lambda a: allPost.reacts[a], allPost.reacts.keys()))
+					for i in range(len(allPost.reacts)):
+						avgIndivReacts[i] += allPost.reacts[allPost.reacts.keys()[i]]
+
+				avgLikes = float(avgLikes)/num
+				avgTotalReacts = float(avgTotalReacts)/num
+				avgIndivReacts = [float(avgIndivReacts[x])/num for x in range(len(avgIndivReacts))]
+
+				# print 'avg: ',[avgLikes,avgTotalReacts,avgIndivReacts]
+
+				likeSDSq = 0	#likes sum of differences squared
+				tReactsSDSq = 0
+				iReactsSDSq = [0 for i in range(len(post.reacts))]
+				for allPost in self.allPosts:
+					likeSDSq += self.dSq(allPost.likes,avgLikes)
+					totalReacts = reduce(lambda y,z:y+z, map(lambda a: allPost.reacts[a], allPost.reacts.keys()))
+					tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
+					for i in range(len(iReactsSDSq)):
+						iReactsSDSq[i] += self.dSq(allPost.reacts[allPost.reacts.keys()[i]],avgIndivReacts[i])
+			
+				likeVariance = float(likeSDSq)/num
+				tReactsVariance = float(tReactsSDSq)/num
+				iReactsVariance = [float(iReactsSDSq[x])/num for x in range(len(iReactsSDSq))]
+				zScores = [likeVariance**0.5,tReactsVariance**0.5,[iReactsVariance[x]**0.5 for x in range(len(iReactsVariance))]]
+			else:
+				return None
+			#debug print that shows the calculated zScores
+			print 'z: ',zScores
+			return [float(likes-avgLikes)/zScores[0] if zScores[0]!=0 else 0,
+				float(tReacts-avgTotalReacts)/zScores[1] if zScores[1]!=0 else 0,
+				[(float(iReacts[x]-avgIndivReacts[x])/zScores[2][x] if zScores[2][x]!=0 else 0) for x in range(len(iReacts))]]
 
 	def setAdjustment(self,adjustment):
 		self.adjustment = adjustment
@@ -474,7 +512,7 @@ class pageAnalysis:
 
 
 class myHTMLParser(HTMLParser):
-	#~	[ ] create an actual __init__ method
+	#	[X] create an actual __init__ method
 
 	#performs HTML parsing work on very specific sections of HTML code that has been obtained from the Facebook page of a group
 	#	and stores it in a list of Posts that is later fed into the analysis.addPosts() method when it is called in the
