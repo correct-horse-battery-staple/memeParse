@@ -1,0 +1,7 @@
+*.text
+!testParse[123456789].txt
+*.psd
+/memes/
+*.doc
+*.png
+*.xlsx
