@@ -121,7 +121,7 @@ class Post:
 				return [x,y]
 		if len(self.type)>1:
 			self.type = reduce(removeCon,self.type)
-		# print self.type
+		# print(self.type)
 
 class ContentProvider:
 	#class that represents a poster (content provider)
@@ -137,14 +137,14 @@ class ContentProvider:
 	def addPost(self, post):
 		poster = post.getPoster()
 		if poster != self.name:
-			print 'error: name does not match that of the post\'s creator'
+			print('error: name does not match that of the post\'s creator')
 		else:
 			self.totalPosts += 1
 			self.posts += [post]
 			self.totalLikes += post.getLikes()
 			reacts = post.getReacts()
 			for react in reacts:
-				# print reacts[react]
+				# print(reacts[react])
 				self.totalReacts[react]+=int(reacts[react])
 
 	def __str__(self):
@@ -171,12 +171,12 @@ class pageAnalysis:
 		#	adding them when necessary
 
 		for post in posts:
-			#print post
+			#print(post)
 			user = post.getPoster()
 			if user not in self.posters:
 				self.posters[user]=ContentProvider(post.getPoster(),post.getMod())
 				self.sortedKeys+=[user]
-				# print self.sortedKeys
+				# print(self.sortedKeys)
 			if post.getMod()>0:
 				self.mods[user]=post.getMod()
 			self.posters[user].addPost(post)
@@ -193,7 +193,7 @@ class pageAnalysis:
 	def dSq(self,x,y):
 		#method for calculating the d(ifference) sq(uared)
 
-		#print x,y
+		#print(x,y)
 		return (x-y)**2
 
 	def standardDevPost(self,post,comparePoster=True):
@@ -202,13 +202,13 @@ class pageAnalysis:
 		#	the posts made by a specific ContentProvider or by across all ContentProviders (across self.allPosts)
 
 		if post not in self.allPosts:
-			print 'come on that\'s not a real post'
+			print('come on that\'s not a real post')
 		else:
 			poster = post.poster
 			likes = post.likes
 			tReacts = reduce(lambda x,y:x+y,map(lambda z: post.reacts[z],post.reacts.keys()))
 			iReacts = [post.reacts[x] for x in post.reacts.keys()]
-			#print likes, tReacts, iReacts
+			#print(likes, tReacts, iReacts)
 
 			zScores = []
 			if comparePoster:
@@ -225,7 +225,7 @@ class pageAnalysis:
 					iReactsSDSq = [0 for i in range(len(post.reacts))]
 					for posterPost in posterPosts:
 						likeSDSq += self.dSq(posterPost.likes,avgLikes)
-						#print posterPost.reacts
+						#print(posterPost.reacts)
 						totalReacts = reduce(lambda y,z:y+z, map(lambda a: posterPost.reacts[a], posterPost.reacts.keys()))
 						tReactsSDSq += self.dSq(totalReacts,avgTotalReacts)
 						for i in range(len(iReactsSDSq)):
@@ -255,7 +255,7 @@ class pageAnalysis:
 					avgTotalReacts = float(avgTotalReacts)/num
 					avgIndivReacts = [float(avgIndivReacts[x])/num for x in range(len(avgIndivReacts))]
 
-					# print 'avg: ',[avgLikes,avgTotalReacts,avgIndivReacts]
+					# print('avg: ',[avgLikes,avgTotalReacts,avgIndivReacts])
 
 					likeSDSq = 0	#likes sum of differences squared
 					tReactsSDSq = 0
@@ -274,7 +274,7 @@ class pageAnalysis:
 				else:
 					return None
 			#debug print that shows the calculated zScores
-			print 'z: ',zScores
+			print('z: ',zScores)
 			return [float(likes-avgLikes)/zScores[0] if zScores[0]!=0 else 0,
 				float(tReacts-avgTotalReacts)/zScores[1] if zScores[1]!=0 else 0,
 				[(float(iReacts[x]-avgIndivReacts[x])/zScores[2][x] if zScores[2][x]!=0 else 0) for x in range(len(iReacts))]]
@@ -285,7 +285,7 @@ class pageAnalysis:
 		#calculates the standard deviation of a ContentProvider compared against all others
 
 		if poster not in self.posters:
-			print 'what you doin\' yo'
+			print('what you doin\' yo')
 		else:
 			provider = self.posters[poster]
 			allPosts = provider.posts
@@ -303,7 +303,7 @@ class pageAnalysis:
 				avgTotalReacts = float(avgTotalReacts)/num
 				avgIndivReacts = [float(avgIndivReacts[x])/num for x in range(len(avgIndivReacts))]
 
-				# print 'avg: ',[avgLikes,avgTotalReacts,avgIndivReacts]
+				# print('avg: ',[avgLikes,avgTotalReacts,avgIndivReacts])
 
 				likeSDSq = 0	#likes sum of differences squared
 				tReactsSDSq = 0
@@ -322,7 +322,7 @@ class pageAnalysis:
 			else:
 				return None
 			#debug print that shows the calculated zScores
-			print 'z: ',zScores
+			print('z: ',zScores)
 			return [float(likes-avgLikes)/zScores[0] if zScores[0]!=0 else 0,
 				float(tReacts-avgTotalReacts)/zScores[1] if zScores[1]!=0 else 0,
 				[(float(iReacts[x]-avgIndivReacts[x])/zScores[2][x] if zScores[2][x]!=0 else 0) for x in range(len(iReacts))]]
@@ -445,11 +445,11 @@ class pageAnalysis:
 			reverseWordDict[paramWordDict[key]]=key
 
 		keys = self.posters.keys()
-		# print keys
+		# print(keys)
 		params = []
 		#checking how args handles lists
 		#it just gives a list
-		#print args
+		#print(args)
 		arg_output = 'args:'
 		for arg in args:
 			if type(arg) is int:
@@ -467,29 +467,29 @@ class pageAnalysis:
 				arg_output+=' '+paramWordDict[arg]
 				params+= [self.getLambda(paramWordDict[arg])]
 			else:
-				print 'invalid arg: %s'%arg
+				print('invalid arg: %s'%arg)
 
 		if len(args)==0:
-			print arg_output+' None'
+			print(arg_output+' None')
 		else:
-			print arg_output
+			print(arg_output)
 
 		self.params = params
 		#testing all the lambdas
 		# jakob = 'Jakob Myers'
-		# print getLambda(3)(jakob)
-		# print map_reduce(jakob)
+		# print(getLambda(3)(jakob))
+		# print(map_reduce(jakob))
 
 		if (21 in params) ^ (22 in params) and len(params)>1:
-			print 'these params don\'t really make sense but w\\e'
+			print('these params don\'t really make sense but w\\e')
 
 		if len(params)==0:
 			self.sortedKeys = sorted(keys,cmp = lambda x,y:cmp(self.getLambda(0)(y),self.getLambda(0)(x)))
-			# print self.sortedKeys
+			# print(self.sortedKeys)
 		else:
 			self.sortedKeys = sorted(keys,cmp = lambda x,y:cmp(self.map_reduce(y),self.map_reduce(x)))
-			# print self.sortedKeys
-		#print 'sorted keys: '+str(self.sortedKeys)
+			# print(self.sortedKeys)
+		#print('sorted keys: '+str(self.sortedKeys))
 
 	def printSummary(self,sort=False):
 		#prints out a summary of all the posters, which currently is a very barebones single value that
@@ -506,9 +506,9 @@ class pageAnalysis:
 			self.sort()
 		for key in self.sortedKeys:
 			if len(self.params)>0:
-				print key+':\t'+('\t' if len(key)<7 else '')+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.map_reduce(key))[:5]
+				print(key+':\t'+('\t' if len(key)<7 else '')+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.map_reduce(key))[:5])
 			else:
-				print key+':\t'+('\t' if len(key)<7 else '')+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.getLambda(0)(key))[:5]
+				print(key+':\t'+('\t' if len(key)<7 else '')+('\t' if len(key)<15 else '')+('\t' if len(key)<23 else '')+str(self.getLambda(0)(key))[:5])
 
 
 class myHTMLParser(HTMLParser):
@@ -572,12 +572,12 @@ class myHTMLParser(HTMLParser):
 			else:
 				self.attrCount[attr]=1
 			if attr == postAttr:
-				#print self.currentPost
+				#print(self.currentPost)
 				if not self.currentPost.isNull():
 					self.postList += [self.currentPost]
 					self.currentPost = Post()
 					if self.currentPost.type!=[]:
-						print 'wat'
+						print('wat')
 				self.tag = 'post'
 			elif attr in attrDict:
 				if self.tag != 'comment':
@@ -587,7 +587,7 @@ class myHTMLParser(HTMLParser):
 			elif attr in timeStamp and self.currentPost.datetimeNull():
 				timeTag = timeStamp[attr]
 			if attr in postType:
-				#print attr
+				#print(attr)
 				self.currentPost.setType(postType[attr])
 
 		if reactionTag:
@@ -595,7 +595,7 @@ class myHTMLParser(HTMLParser):
 			num,react = aria.split(' ')
 			self.tag = react.lower()
 			self.currentPost.setReacts(react,num)
-			#print aria
+			#print(aria)
 		if timeTag > 0:
 			if self.tag != 'comment':
 				if timeTag == 1:
@@ -606,20 +606,20 @@ class myHTMLParser(HTMLParser):
 				elif timeTag == 2:
 					humantime = attrs[0][1]
 					utc = filter(lambda x: x[0]=='data-utime',attrs)[0][1]
-					# print humantime
-					# print utc
+					# print(humantime)
+					# print(utc)
 					self.currentPost.setDatetime(humantime)
 					self.currentPost.setUTC(utc)
-					#print self.currentPost.datetime
+					#print(self.currentPost.datetime)
 
 
 	# def handle_endtag(self, tag):
-	# 	print "end\t:", tag
+	# 	print("end\t:", tag)
 
 	def handle_data(self, data):
 		#accesses the self.tag set in handle_starttag() to determine what to do with the data
 
-		#print (self.tag, data)
+		#print(self.tag, data)
 		if self.tag != 'comment':
 			if self.tag == 'poster':
 				if self.currentPost.posterNull():
@@ -642,47 +642,50 @@ class myHTMLParser(HTMLParser):
 		attrList = self.attrCount.keys()
 		attrList.sort(cmp = lambda x,y:cmp(self.attrCount[x],self.attrCount[y]))
 		for attr in attrList:
-			print attr,': ',self.attrCount[attr]
+			print(attr,': ',self.attrCount[attr])
 
 	def printData(self):
 		for i in self.dataList:
-			print i
+			print(i)
 
 	def printPosts(self, concise=False):
 		#prints out all the posts that have been parsed, with the concise param indicating that
 		#	only some information is needed
 
-		#print 'printPosts called'
+		#print('printPosts called')
 		if concise:
 			for post in self.postList:
-				print 'Poster:\t',post.poster
-				# print 'Date time:\t%s (%s)'%(post.datetime,post.UTC)
-				# print 'Likes:\t',post.likes
-				print 'Post type:\t',post.type
+				print('Poster:\t',post.poster)
+				# print('Date time:\t%s (%s)'%(post.datetime,post.UTC))
+				# print('Likes:\t',post.likes)
+				print('Post type:\t',post.type)
 		else:
 			for post in self.postList:
-				print post
+				print(post)
 
 #main method: this is where the magic happens
+def main():
+	#print range(6,20,2)
 
-#print range(6,20,2)
+	fileName = 'epoch2.txt'
+	analysis = pageAnalysis()
+	analysis.run(fileName)
+	print(len(analysis.allPosts))
+	analysis.sort(1)
+	analysis.printSummary()
+	analysis.setAdjustment(10)
+	analysis.sort(1)
+	analysis.printSummary()
+	# mostRecentPost = analysis.allPosts[0]
+	# print(analysis.standardDevPost(mostRecentPost))
+	# print(mostRecentPost)
+	# for recentPost in analysis.allPosts[1:10]:
+	# 	print(analysis.standardDevPost(recentPost,False))
+	# 	print(analysis.standardDevPost(recentPost))
+	# 	print(recentPost)
+	# analysis.sort(4)
+	#for post in analysis.allPosts:
+		#print(post)
 
-fileName = 'epoch2.txt'
-analysis = pageAnalysis()
-analysis.run(fileName)
-print len(analysis.allPosts)
-analysis.sort(1)
-analysis.printSummary()
-analysis.setAdjustment(10)
-analysis.sort(1)
-analysis.printSummary()
-# mostRecentPost = analysis.allPosts[0]
-# print analysis.standardDevPost(mostRecentPost)
-# print mostRecentPost
-# for recentPost in analysis.allPosts[1:10]:
-# 	print analysis.standardDevPost(recentPost,False)
-# 	print analysis.standardDevPost(recentPost)
-# 	print recentPost
-# analysis.sort(4)
-#for post in analysis.allPosts:
-	#print post
+if __name__=="__main__":
+	main()
